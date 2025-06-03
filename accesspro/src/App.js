@@ -1,23 +1,45 @@
-import { Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import Register from './pages/Register';  // Asegúrate de tener esta página creada
-import Login from './pages/Login';        // Agrega esta importación
-import Sidebar from './components/Sidebar';
-import Navbar from './components/Navbar';
+import React, { useState } from 'react';
+import InicioSesion from './components/InicioSesion';
 
 function App() {
+  const [contenido, setContenido] = useState('inicio');
+
   return (
     <div className="flex h-screen">
-      <Sidebar />
+      {/* Sidebar */}
+      <div className="w-1/6 bg-blue-900 text-white flex flex-col">
+        <div className="h-16 bg-blue-900 flex items-center pl-2">
+          {/* Logo ajustado */}
+          <img src="/LogoAccessPro.png" alt="Logo" className="w-10 h-10 object-contain" />
+        </div>
+        <nav className="flex-1 mt-4 space-y-2 px-4">
+          <button
+            onClick={() => setContenido('inicio')}
+            className="w-full text-left py-2 px-3 rounded hover:bg-blue-700"
+          >
+            INICIO
+          </button>
+          <button
+            onClick={() => setContenido('acceso')}
+            className="w-full text-left py-2 px-3 rounded hover:bg-blue-700"
+          >
+            ACCESO
+          </button>
+        </nav>
+      </div>
+
+      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <Navbar />
-        <main className="flex-1 overflow-auto p-4">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login />} /> {/* Ruta para Login */}
-          </Routes>
-        </main>
+        {/* Header */}
+        <div className="h-16 bg-blue-900 text-white flex items-center justify-center px-4">
+          <h1 className="text-4xl font-bold text-white">AccessPro</h1>
+        </div>
+
+        {/* Contenido debajo del header */}
+        <div className="p-8 flex-1 flex items-center justify-center bg-gray-100">
+          {contenido === 'inicio' && <InicioSesion />}
+          {contenido === 'acceso' && <p>Sección de acceso (próximamente)</p>}
+        </div>
       </div>
     </div>
   );
