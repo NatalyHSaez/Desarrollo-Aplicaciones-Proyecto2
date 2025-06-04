@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import InicioSesion from './components/InicioSesion';
+import Acceso from './components/Acceso';
 
 function App() {
   const [contenido, setContenido] = useState('inicio');
@@ -38,7 +39,7 @@ function App() {
         {/* Contenido debajo del header */}
         <div className="p-8 flex-1 flex items-center justify-center bg-gray-100">
           {contenido === 'inicio' && <InicioSesion />}
-          {contenido === 'acceso' && <p>Sección de acceso (próximamente)</p>}
+          {contenido === 'acceso' && <Acceso />}
         </div>
       </div>
     </div>
