@@ -22,8 +22,8 @@ function App() {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
-      <div className="w-1/6 bg-blue-900 text-white flex flex-col">
+      {/* Sidebar sticky */}
+      <div className="w-1/6 bg-blue-900 text-white flex flex-col sticky top-0 h-screen">
         <div className="h-16 bg-blue-900 flex items-center pl-2">
           <img src="/LogoAccessPro.png" alt="Logo" className="w-10 h-10 object-contain" />
         </div>
@@ -52,7 +52,7 @@ function App() {
           <h1 className="text-4xl font-bold text-white">AccessPro</h1>
         </div>
 
-        <div className="p-8 flex-1 flex items-center justify-center bg-gray-100">
+        <div className="p-8 flex-1 flex items-center justify-center bg-gray-100 overflow-auto">
           <Routes>
             <Route
               path="/inicio"
