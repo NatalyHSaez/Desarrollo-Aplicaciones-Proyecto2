@@ -100,9 +100,9 @@ function InicioSesion({ onLoginSuccess }) {
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-blue-700 hover:text-blue-900 focus:outline-none"
             >
               {mostrarPassword ? (
-                <i className="fas fa-eye-slash" />
-              ) : (
                 <i className="fas fa-eye" />
+              ) : (
+                <i className="fas fa-eye-slash" />
               )}
             </button>
           </div>

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { FiUser, FiMail, FiLock, FiPhone, FiCalendar, FiUserCheck } from 'react-icons/fi';
+import {
+  FiUser, FiMail, FiLock, FiPhone, FiCalendar, FiUserCheck
+} from 'react-icons/fi';
 
 const formatRUT = (rut) => {
   let clean = rut.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
@@ -29,6 +31,7 @@ const Registro = () => {
   const [servicio, setServicio] = useState('');
   const [password, setPassword] = useState('');
   const [repetirPassword, setRepetirPassword] = useState('');
+  const [errores, setErrores] = useState({});
 
   const handleRutChange = (e) => {
     const value = e.target.value;
@@ -48,7 +51,26 @@ const Registro = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert('Datos enviados');
+
+    const nuevosErrores = {};
+    if (!rut) nuevosErrores.rut = 'El RUT es obligatorio';
+    if (!nombres) nuevosErrores.nombres = 'Nombres es obligatorio';
+    if (!apellidoPaterno) nuevosErrores.apellidoPaterno = 'Apellido paterno es obligatorio';
+    if (!apellidoMaterno) nuevosErrores.apellidoMaterno = 'Apellido materno es obligatorio';
+    if (!genero) nuevosErrores.genero = 'Debe seleccionar un género';
+    if (!fechaNacimiento) nuevosErrores.fechaNacimiento = 'La fecha de nacimiento es obligatoria';
+    if (!email) nuevosErrores.email = 'El email es obligatorio';
+    if (!telefono || telefono.length < 12) nuevosErrores.telefono = 'Teléfono no válido';
+    if (!cargo) nuevosErrores.cargo = 'Debe seleccionar un cargo';
+    if (!servicio) nuevosErrores.servicio = 'Debe seleccionar un servicio';
+    if (!password) nuevosErrores.password = 'Debe ingresar una contraseña';
+    if (password !== repetirPassword) nuevosErrores.repetirPassword = 'Las contraseñas no coinciden';
+
+    setErrores(nuevosErrores);
+    if (Object.keys(nuevosErrores).length > 0) return;
+
+    alert('Datos enviados correctamente');
+    // Aquí podrías hacer un fetch o axios para enviar los datos a tu backend
   };
 
   return (
@@ -69,6 +91,7 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
+            {errores.rut && <p className="text-red-500 text-sm">{errores.rut}</p>}
           </div>
 
           {/* Género */}
@@ -84,6 +107,7 @@ const Registro = () => {
               <option value="Femenino">Femenino</option>
               <option value="Otro">Otro</option>
             </select>
+            {errores.genero && <p className="text-red-500 text-sm">{errores.genero}</p>}
           </div>
 
           {/* Nombres */}
@@ -98,6 +122,7 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
+            {errores.nombres && <p className="text-red-500 text-sm">{errores.nombres}</p>}
           </div>
 
           {/* Apellido Materno */}
@@ -109,6 +134,7 @@ const Registro = () => {
               onChange={(e) => setApellidoMaterno(e.target.value)}
               className="w-full p-2 border rounded"
             />
+            {errores.apellidoMaterno && <p className="text-red-500 text-sm">{errores.apellidoMaterno}</p>}
           </div>
 
           {/* Apellido Paterno */}
@@ -120,6 +146,7 @@ const Registro = () => {
               onChange={(e) => setApellidoPaterno(e.target.value)}
               className="w-full p-2 border rounded"
             />
+            {errores.apellidoPaterno && <p className="text-red-500 text-sm">{errores.apellidoPaterno}</p>}
           </div>
 
           {/* Fecha de Nacimiento */}
@@ -134,6 +161,7 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
+            {errores.fechaNacimiento && <p className="text-red-500 text-sm">{errores.fechaNacimiento}</p>}
           </div>
 
           {/* Cargo */}
@@ -148,6 +176,7 @@ const Registro = () => {
               <option value="Admin">Admin</option>
               <option value="Usuario">Usuario</option>
             </select>
+            {errores.cargo && <p className="text-red-500 text-sm">{errores.cargo}</p>}
           </div>
 
           {/* Servicio */}
@@ -162,6 +191,7 @@ const Registro = () => {
               <option value="TI">TI</option>
               <option value="RRHH">RRHH</option>
             </select>
+            {errores.servicio && <p className="text-red-500 text-sm">{errores.servicio}</p>}
           </div>
 
           {/* Email */}
@@ -176,6 +206,7 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
+            {errores.email && <p className="text-red-500 text-sm">{errores.email}</p>}
           </div>
 
           {/* Teléfono */}
@@ -190,6 +221,7 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
+            {errores.telefono && <p className="text-red-500 text-sm">{errores.telefono}</p>}
           </div>
 
           {/* Contraseña */}
@@ -204,6 +236,7 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
+            {errores.password && <p className="text-red-500 text-sm">{errores.password}</p>}
           </div>
 
           {/* Repetir Contraseña */}
@@ -215,6 +248,7 @@ const Registro = () => {
               onChange={(e) => setRepetirPassword(e.target.value)}
               className="w-full p-2 border rounded"
             />
+            {errores.repetirPassword && <p className="text-red-500 text-sm">{errores.repetirPassword}</p>}
           </div>
 
           {/* Botón */}
