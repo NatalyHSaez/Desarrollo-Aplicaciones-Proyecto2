@@ -36,20 +36,22 @@ function App() {
         </div>
 
         {mostrarSidebar && (
-          <nav className="flex-1 mt-4 space-y-2 px-4">
+          <nav className="flex-1 mt-4 space-y-2 px-2 text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg">
             {autenticado ? (
               <>
-                <Link to="/perfil" className="block py-2 px-3 rounded hover:bg-blue-700">Perfil</Link>
-                <Link to="/control-general" className="block py-2 px-3 rounded hover:bg-blue-700">Control General</Link>
-                <Link to="/control-usuario" className="block py-2 px-3 rounded hover:bg-blue-700">Control Usuario</Link>
-                <Link to="/historial" className="block py-2 px-3 rounded hover:bg-blue-700">Historial</Link>
-                <Link to="/registro" className="block py-2 px-3 rounded hover:bg-blue-700">Registro</Link>
-                <button onClick={cerrarSesion} className="w-full text-left py-2 px-3 rounded hover:bg-blue-700">Cerrar Sesión</button>
+                <Link to="/perfil" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Perfil</Link>
+                <Link to="/control-general" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Control General</Link>
+                <Link to="/control-usuario" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Control Usuario</Link>
+                <Link to="/historial" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Historial</Link>
+                <Link to="/registro" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Registro</Link>
+                <button onClick={cerrarSesion} className="w-full text-left py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">
+                  Cerrar Sesión
+                </button>
               </>
             ) : (
               <>
-                <Link to="/inicio" className="block py-2 px-3 rounded hover:bg-blue-700">INICIO</Link>
-                <Link to="/acceso" className="block py-2 px-3 rounded hover:bg-blue-700">ACCESO</Link>
+                <Link to="/inicio" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">INICIO</Link>
+                <Link to="/acceso" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">ACCESO</Link>
               </>
             )}
           </nav>
@@ -59,7 +61,7 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         <div className="h-16 bg-blue-900 text-white flex items-center justify-center px-4">
-          <h1 className="text-4xl font-bold text-white">AccessPro</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white">AccessPro</h1>
         </div>
 
         <div className="p-8 flex-1 flex items-center justify-center bg-gray-100 overflow-auto">
@@ -67,9 +69,7 @@ function App() {
             <Route
               path="/inicio"
               element={
-                autenticado
-                  ? <Navigate to="/perfil" />
-                  : <InicioSesion onLoginSuccess={handleLoginSuccess} />
+                autenticado ? <Navigate to="/perfil" /> : <InicioSesion onLoginSuccess={handleLoginSuccess} />
               }
             />
             <Route path="/acceso" element={<Acceso />} />
