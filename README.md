@@ -35,14 +35,14 @@ AccessPro es una solución integral para gestionar el ingreso y salida del perso
 ## 📅 Planificación de Desarrollo
 
 ### 🗓️ Semana 1:
-- 🎨 Diseñar la interfaz de la pantalla de inicio de sesión (Login).
-- 📝 Diseñar la interfaz de la pantalla de registro de usuario.
-- 🔍 Diseñar la interfaz de la pantalla de acceso mediante escaneo de QR.
+- 🎨 Diseñar la interfaz de la pantalla de inicio de sesión (Login). ✅
+- 📝 Diseñar la interfaz de la pantalla de registro de usuario. ✅
+- 🔍 Diseñar la interfaz de la pantalla de acceso mediante escaneo de QR. ✅
 - 📤 Implementar envío automático de QR vía email.
 
 ### 🗓️ Semana 2:
 - 🔄 Implementar funcionalidad de la pantalla de acceso, incluyendo el escaneo.
-- 📋 Diseñar la interfaz del panel del control general para Administradores.
+- 📋 Diseñar la interfaz del panel del control general para Administradores.✅
 - 👤 Diseñar pantalla de control individual de usuarios (Administrador)
 
 ### 🗓️ Semana 3:
