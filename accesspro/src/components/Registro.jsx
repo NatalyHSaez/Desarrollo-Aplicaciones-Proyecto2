@@ -3,6 +3,10 @@ import {
   FiUser, FiMail, FiLock, FiPhone, FiCalendar, FiUserCheck
 } from 'react-icons/fi';
 
+import { auth, db } from '../firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+
 const formatRUT = (rut) => {
   let clean = rut.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
   if (clean.length <= 1) return clean;
@@ -69,8 +73,45 @@ const Registro = () => {
     setErrores(nuevosErrores);
     if (Object.keys(nuevosErrores).length > 0) return;
 
-    alert('Datos enviados correctamente');
-    // Aquí podrías hacer un fetch o axios para enviar los datos a tu backend
+    // Crear usuario en Firebase Auth y guardar datos en Firestore
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(async (userCredential) => {
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "usuarios", user.uid), {
+          uid: user.uid,
+          rut: rut,
+          nombres: nombres,
+          apellidoPaterno: apellidoPaterno,
+          apellidoMaterno: apellidoMaterno,
+          genero: genero,
+          fechaNacimiento: fechaNacimiento,
+          email: email,
+          telefono: telefono,
+          cargo: cargo,
+          servicio: servicio,
+        });
+
+        alert("Usuario registrado correctamente");
+        // Opcional: limpiar formulario después del registro
+        setRut('');
+        setNombres('');
+        setApellidoPaterno('');
+        setApellidoMaterno('');
+        setGenero('');
+        setFechaNacimiento('');
+        setEmail('');
+        setTelefono('+56 9');
+        setCargo('');
+        setServicio('');
+        setPassword('');
+        setRepetirPassword('');
+        setErrores({});
+      })
+      .catch((error) => {
+        console.error("Error al registrar usuario:", error.message);
+        alert("Error: " + error.message);
+      });
   };
 
   return (
