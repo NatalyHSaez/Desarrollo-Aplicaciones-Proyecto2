@@ -3,9 +3,10 @@ import {
   FiUser, FiMail, FiLock, FiPhone, FiCalendar, FiUserCheck
 } from 'react-icons/fi';
 
-import { auth, db } from '../firebase';
+import { auth, db, functions } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { ref, set } from 'firebase/database';
+import { httpsCallable } from 'firebase/functions';
 
 const formatRUT = (rut) => {
   let clean = rut.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
@@ -36,6 +37,7 @@ const Registro = () => {
   const [password, setPassword] = useState('');
   const [repetirPassword, setRepetirPassword] = useState('');
   const [errores, setErrores] = useState({});
+  const [submitAttempted, setSubmitAttempted] = useState(false); // <-- estado para controlar si se intentó enviar
 
   const handleRutChange = (e) => {
     const value = e.target.value;
@@ -53,8 +55,9 @@ const Registro = () => {
     setTelefono(`${fixedPrefix}${input}`);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitAttempted(true);
 
     const nuevosErrores = {};
     if (!rut) nuevosErrores.rut = 'El RUT es obligatorio';
@@ -73,45 +76,50 @@ const Registro = () => {
     setErrores(nuevosErrores);
     if (Object.keys(nuevosErrores).length > 0) return;
 
-    // Crear usuario en Firebase Auth y guardar datos en Firestore
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(async (userCredential) => {
-        const user = userCredential.user;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-        await setDoc(doc(db, "usuarios", user.uid), {
-          uid: user.uid,
-          rut: rut,
-          nombres: nombres,
-          apellidoPaterno: apellidoPaterno,
-          apellidoMaterno: apellidoMaterno,
-          genero: genero,
-          fechaNacimiento: fechaNacimiento,
-          email: email,
-          telefono: telefono,
-          cargo: cargo,
-          servicio: servicio,
-        });
-
-        alert("Usuario registrado correctamente");
-        // Opcional: limpiar formulario después del registro
-        setRut('');
-        setNombres('');
-        setApellidoPaterno('');
-        setApellidoMaterno('');
-        setGenero('');
-        setFechaNacimiento('');
-        setEmail('');
-        setTelefono('+56 9');
-        setCargo('');
-        setServicio('');
-        setPassword('');
-        setRepetirPassword('');
-        setErrores({});
-      })
-      .catch((error) => {
-        console.error("Error al registrar usuario:", error.message);
-        alert("Error: " + error.message);
+      // Guardar en Realtime Database
+      await set(ref(db, "usuarios/" + user.uid), {
+        uid: user.uid,
+        rut,
+        nombres,
+        apellidoPaterno,
+        apellidoMaterno,
+        genero,
+        fechaNacimiento,
+        email,
+        telefono,
+        cargo,
+        servicio,
       });
+
+      // Llamar función de Firebase para enviar correo
+      //const sendEmail = httpsCallable(functions, 'sendRegistrationEmail');
+      //await sendEmail({ email, rut, password });
+
+      alert("Usuario registrado y correo enviado correctamente");
+
+      // Limpiar formulario y estado de intento de submit
+      setRut('');
+      setNombres('');
+      setApellidoPaterno('');
+      setApellidoMaterno('');
+      setGenero('');
+      setFechaNacimiento('');
+      setEmail('');
+      setTelefono('+56 9');
+      setCargo('');
+      setServicio('');
+      setPassword('');
+      setRepetirPassword('');
+      setErrores({});
+      setSubmitAttempted(false);
+    } catch (error) {
+      console.error("Error al registrar usuario:", error.message);
+      alert("Error: " + error.message);
+    }
   };
 
   return (
@@ -119,6 +127,7 @@ const Registro = () => {
       <div className="bg-white p-8 rounded-xl shadow-md">
         <h2 className="text-3xl font-bold text-center text-blue-900 mb-8">Registro de Usuario</h2>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
           {/* RUT */}
           <div>
             <label className="block text-gray-700 mb-1">RUT</label>
@@ -132,7 +141,9 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
-            {errores.rut && <p className="text-red-500 text-sm">{errores.rut}</p>}
+            {submitAttempted && errores.rut && (
+              <p className="text-red-500 text-sm">{errores.rut}</p>
+            )}
           </div>
 
           {/* Género */}
@@ -148,7 +159,9 @@ const Registro = () => {
               <option value="Femenino">Femenino</option>
               <option value="Otro">Otro</option>
             </select>
-            {errores.genero && <p className="text-red-500 text-sm">{errores.genero}</p>}
+            {submitAttempted && errores.genero && (
+              <p className="text-red-500 text-sm">{errores.genero}</p>
+            )}
           </div>
 
           {/* Nombres */}
@@ -163,19 +176,9 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
-            {errores.nombres && <p className="text-red-500 text-sm">{errores.nombres}</p>}
-          </div>
-
-          {/* Apellido Materno */}
-          <div>
-            <label className="block text-gray-700 mb-1">Apellido Materno</label>
-            <input
-              type="text"
-              value={apellidoMaterno}
-              onChange={(e) => setApellidoMaterno(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-            {errores.apellidoMaterno && <p className="text-red-500 text-sm">{errores.apellidoMaterno}</p>}
+            {submitAttempted && errores.nombres && (
+              <p className="text-red-500 text-sm">{errores.nombres}</p>
+            )}
           </div>
 
           {/* Apellido Paterno */}
@@ -187,7 +190,23 @@ const Registro = () => {
               onChange={(e) => setApellidoPaterno(e.target.value)}
               className="w-full p-2 border rounded"
             />
-            {errores.apellidoPaterno && <p className="text-red-500 text-sm">{errores.apellidoPaterno}</p>}
+            {submitAttempted && errores.apellidoPaterno && (
+              <p className="text-red-500 text-sm">{errores.apellidoPaterno}</p>
+            )}
+          </div>
+
+          {/* Apellido Materno */}
+          <div>
+            <label className="block text-gray-700 mb-1">Apellido Materno</label>
+            <input
+              type="text"
+              value={apellidoMaterno}
+              onChange={(e) => setApellidoMaterno(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+            {submitAttempted && errores.apellidoMaterno && (
+              <p className="text-red-500 text-sm">{errores.apellidoMaterno}</p>
+            )}
           </div>
 
           {/* Fecha de Nacimiento */}
@@ -202,7 +221,9 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
-            {errores.fechaNacimiento && <p className="text-red-500 text-sm">{errores.fechaNacimiento}</p>}
+            {submitAttempted && errores.fechaNacimiento && (
+              <p className="text-red-500 text-sm">{errores.fechaNacimiento}</p>
+            )}
           </div>
 
           {/* Cargo */}
@@ -217,7 +238,9 @@ const Registro = () => {
               <option value="Admin">Admin</option>
               <option value="Usuario">Usuario</option>
             </select>
-            {errores.cargo && <p className="text-red-500 text-sm">{errores.cargo}</p>}
+            {submitAttempted && errores.cargo && (
+              <p className="text-red-500 text-sm">{errores.cargo}</p>
+            )}
           </div>
 
           {/* Servicio */}
@@ -232,7 +255,9 @@ const Registro = () => {
               <option value="TI">TI</option>
               <option value="RRHH">RRHH</option>
             </select>
-            {errores.servicio && <p className="text-red-500 text-sm">{errores.servicio}</p>}
+            {submitAttempted && errores.servicio && (
+              <p className="text-red-500 text-sm">{errores.servicio}</p>
+            )}
           </div>
 
           {/* Email */}
@@ -247,7 +272,9 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
-            {errores.email && <p className="text-red-500 text-sm">{errores.email}</p>}
+            {submitAttempted && errores.email && (
+              <p className="text-red-500 text-sm">{errores.email}</p>
+            )}
           </div>
 
           {/* Teléfono */}
@@ -262,7 +289,9 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
-            {errores.telefono && <p className="text-red-500 text-sm">{errores.telefono}</p>}
+            {submitAttempted && errores.telefono && (
+              <p className="text-red-500 text-sm">{errores.telefono}</p>
+            )}
           </div>
 
           {/* Contraseña */}
@@ -277,7 +306,9 @@ const Registro = () => {
                 className="w-full p-2 outline-none"
               />
             </div>
-            {errores.password && <p className="text-red-500 text-sm">{errores.password}</p>}
+            {submitAttempted && errores.password && (
+              <p className="text-red-500 text-sm">{errores.password}</p>
+            )}
           </div>
 
           {/* Repetir Contraseña */}
@@ -289,18 +320,20 @@ const Registro = () => {
               onChange={(e) => setRepetirPassword(e.target.value)}
               className="w-full p-2 border rounded"
             />
-            {errores.repetirPassword && <p className="text-red-500 text-sm">{errores.repetirPassword}</p>}
+            {submitAttempted && errores.repetirPassword && (
+              <p className="text-red-500 text-sm">{errores.repetirPassword}</p>
+            )}
           </div>
 
-          {/* Botón */}
-          <div className="col-span-1 md:col-span-2 flex justify-center mt-4">
+          <div className="md:col-span-2 text-center mt-6">
             <button
               type="submit"
-              className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded"
             >
-              Guardar Datos
+              Registrar
             </button>
           </div>
+
         </form>
       </div>
     </div>

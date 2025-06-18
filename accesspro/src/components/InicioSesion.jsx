@@ -14,7 +14,7 @@ function InicioSesion({ onLoginSuccess }) {
   };
 
   const formatearRut = (rut) => {
-  // Ejemplo de lógica para formatear el rut, puede variar según tu implementación
+  // Ejemplo de lógica para formatear el rut
   const rutLimpio = rut.replace(/\./g, '').replace('-', '');
   const cuerpo = rutLimpio.slice(0, -1);
   const dv = rutLimpio.slice(-1).toUpperCase();

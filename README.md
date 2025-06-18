@@ -38,17 +38,18 @@ AccessPro es una solución integral para gestionar el ingreso y salida del perso
 - 🎨 Diseñar la interfaz de la pantalla de inicio de sesión (Login). ✅
 - 📝 Diseñar la interfaz de la pantalla de registro de usuario. ✅
 - 🔍 Diseñar la interfaz de la pantalla de acceso mediante escaneo de QR. ✅
-- 📤 Implementar envío automático de QR vía email.
+- 🧾 Diseñar pantalla de perfil de usuario✅
 
 ### 🗓️ Semana 2:
-- 🔄 Implementar funcionalidad de la pantalla de acceso, incluyendo el escaneo.
+- 🔗 Conectar Firebase para autenticación y base de datos✅
 - 📋 Diseñar la interfaz del panel del control general para Administradores.✅
-- 👤 Diseñar pantalla de control individual de usuarios (Administrador)
+- 📤 Implementar envío automático de QR vía email.
 
 ### 🗓️ Semana 3:
-- 🔗 Conectar Firebase para autenticación y base de datos
+- 🔄 Implementar funcionalidad de la pantalla de acceso, incluyendo el escaneo.
 - 📆 Diseñar pantalla de historial personal
-- 🧾 Diseñar pantalla de perfil de usuario
+- 👤 Diseñar pantalla de control individual de usuarios (Administrador)
+
 
 ---
 
