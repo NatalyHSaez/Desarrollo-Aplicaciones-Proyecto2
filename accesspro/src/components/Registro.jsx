@@ -37,7 +37,8 @@ const Registro = () => {
   const [password, setPassword] = useState('');
   const [repetirPassword, setRepetirPassword] = useState('');
   const [errores, setErrores] = useState({});
-  const [submitAttempted, setSubmitAttempted] = useState(false); // <-- estado para controlar si se intentó enviar
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleRutChange = (e) => {
     const value = e.target.value;
@@ -76,6 +77,7 @@ const Registro = () => {
     setErrores(nuevosErrores);
     if (Object.keys(nuevosErrores).length > 0) return;
 
+    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -95,13 +97,19 @@ const Registro = () => {
         servicio,
       });
 
-      // Llamar función de Firebase para enviar correo
-      //const sendEmail = httpsCallable(functions, 'sendRegistrationEmail');
-      //await sendEmail({ email, rut, password });
+      // Llamar función callable de Firebase para enviar correo
+      const sendEmail = httpsCallable(functions, 'sendRegistrationEmail');
 
-      alert("Usuario registrado y correo enviado correctamente");
+      try {     
+        const result = await sendEmail({ email, rut, password });
+        if (result.data.success) {
+          alert("Correo enviado correctamente");
+        }
+      } catch (error) {
+       alert("Error al enviar correo: " + error.message);
+      }
 
-      // Limpiar formulario y estado de intento de submit
+      // Limpiar formulario y estado
       setRut('');
       setNombres('');
       setApellidoPaterno('');
@@ -116,10 +124,14 @@ const Registro = () => {
       setRepetirPassword('');
       setErrores({});
       setSubmitAttempted(false);
+
     } catch (error) {
-      console.error("Error al registrar usuario:", error.message);
-      alert("Error: " + error.message);
+      console.error("Error al registrar usuario:", error);
+      // Si error es HttpsError de Firebase Functions, el mensaje puede estar en error.message o error.details
+      const mensajeError = error.message || "Error desconocido";
+      alert("Error: " + mensajeError);
     }
+    setLoading(false);
   };
 
   return (
@@ -139,6 +151,7 @@ const Registro = () => {
                 onChange={handleRutChange}
                 placeholder="12.345.678-9"
                 className="w-full p-2 outline-none"
+                maxLength={12}
               />
             </div>
             {submitAttempted && errores.rut && (
@@ -219,6 +232,7 @@ const Registro = () => {
                 value={fechaNacimiento}
                 onChange={(e) => setFechaNacimiento(e.target.value)}
                 className="w-full p-2 outline-none"
+                max={new Date().toISOString().split("T")[0]} // no permitir fechas futuras
               />
             </div>
             {submitAttempted && errores.fechaNacimiento && (
@@ -270,6 +284,7 @@ const Registro = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full p-2 outline-none"
+                autoComplete="email"
               />
             </div>
             {submitAttempted && errores.email && (
@@ -287,6 +302,8 @@ const Registro = () => {
                 value={telefono}
                 onChange={handleTelefonoChange}
                 className="w-full p-2 outline-none"
+                maxLength={12}
+                placeholder="+56 9XXXXXXXX"
               />
             </div>
             {submitAttempted && errores.telefono && (
@@ -304,6 +321,7 @@ const Registro = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-2 outline-none"
+                autoComplete="new-password"
               />
             </div>
             {submitAttempted && errores.password && (
@@ -319,18 +337,23 @@ const Registro = () => {
               value={repetirPassword}
               onChange={(e) => setRepetirPassword(e.target.value)}
               className="w-full p-2 border rounded"
+              autoComplete="new-password"
             />
             {submitAttempted && errores.repetirPassword && (
               <p className="text-red-500 text-sm">{errores.repetirPassword}</p>
             )}
           </div>
 
+          {/* Botón enviar */}
           <div className="md:col-span-2 text-center mt-6">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded"
+              disabled={loading}
+              className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded ${
+                loading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              Registrar
+              {loading ? 'Registrando...' : 'Registrar'}
             </button>
           </div>
 
