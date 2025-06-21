@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 function InicioSesion({ onLoginSuccess }) {
   const [rut, setRut] = useState('');
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [errorRut, setErrorRut] = useState('');
   const [password, setPassword] = useState('');
+  const [cargando, setCargando] = useState(false);
 
   const togglePassword = () => setMostrarPassword((prev) => !prev);
 
@@ -14,24 +16,23 @@ function InicioSesion({ onLoginSuccess }) {
   };
 
   const formatearRut = (rut) => {
-  // Ejemplo de lógica para formatear el rut
-  const rutLimpio = rut.replace(/\./g, '').replace('-', '');
-  const cuerpo = rutLimpio.slice(0, -1);
-  const dv = rutLimpio.slice(-1).toUpperCase();
+    const rutLimpio = rut.replace(/\./g, '').replace('-', '');
+    const cuerpo = rutLimpio.slice(0, -1);
+    const dv = rutLimpio.slice(-1).toUpperCase();
 
-  let rutFormateado = '';
-  let contador = 0;
+    let rutFormateado = '';
+    let contador = 0;
 
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    rutFormateado = cuerpo.charAt(i) + rutFormateado;
-    contador++;
-    if (contador % 3 === 0 && i !== 0) {
-      rutFormateado = '.' + rutFormateado;
+    for (let i = cuerpo.length - 1; i >= 0; i--) {
+      rutFormateado = cuerpo.charAt(i) + rutFormateado;
+      contador++;
+      if (contador % 3 === 0 && i !== 0) {
+        rutFormateado = '.' + rutFormateado;
+      }
     }
-  }
 
-  return `${rutFormateado}-${dv}`;  // <-- Aquí está la corrección clave
-};
+    return `${rutFormateado}-${dv}`;
+  };
 
   const validarRut = (rut) =>
     /^[0-9]{1,2}\.?[0-9]{3}\.?[0-9]{3}-[0-9kK]$/.test(rut);
@@ -49,12 +50,35 @@ function InicioSesion({ onLoginSuccess }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (rut === '21.301.164-2' && password === '21301164') {
-      onLoginSuccess();
-    } else {
-      alert('Credenciales incorrectas');
+
+    if (!validarRut(rut)) {
+      setErrorRut('RUT inválido');
+      return;
+    }
+
+    setCargando(true);
+
+    try {
+      const functions = getFunctions();
+      const verificarUsuario = httpsCallable(functions, 'verificarUsuario');
+
+      const { data } = await verificarUsuario({
+        rut,
+        clave: password,
+      });
+
+      if (data?.success) {
+        onLoginSuccess(data);
+      } else {
+        alert('Credenciales incorrectas.');
+      }
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error);
+      alert(error?.message || 'Error de autenticación');
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -110,9 +134,10 @@ function InicioSesion({ onLoginSuccess }) {
 
         <button
           type="submit"
+          disabled={cargando}
           className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
         >
-          Entrar
+          {cargando ? 'Validando...' : 'Entrar'}
         </button>
       </form>
 
