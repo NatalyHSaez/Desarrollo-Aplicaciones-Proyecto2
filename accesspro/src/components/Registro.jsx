@@ -82,7 +82,6 @@ const Registro = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Guardar en Realtime Database
       await set(ref(db, "usuarios/" + user.uid), {
         uid: user.uid,
         rut,
@@ -97,19 +96,18 @@ const Registro = () => {
         servicio,
       });
 
-      // Llamar función callable de Firebase para enviar correo
       const sendEmail = httpsCallable(functions, 'sendRegistrationEmail');
-
-      try {     
+      try {
         const result = await sendEmail({ email, rut, password });
+        console.log("Enviando email a:", email); // <-- Solo para desarrollo
+
         if (result.data.success) {
           alert("Correo enviado correctamente");
         }
       } catch (error) {
-       alert("Error al enviar correo: " + error.message);
+        alert("Error al enviar correo: " + error.message);
       }
 
-      // Limpiar formulario y estado
       setRut('');
       setNombres('');
       setApellidoPaterno('');
@@ -127,10 +125,13 @@ const Registro = () => {
 
     } catch (error) {
       console.error("Error al registrar usuario:", error);
-      // Si error es HttpsError de Firebase Functions, el mensaje puede estar en error.message o error.details
-      const mensajeError = error.message || "Error desconocido";
-      alert("Error: " + mensajeError);
+      if (error.code === "auth/email-already-in-use") {
+        alert("Este correo ya está registrado. Intenta iniciar sesión.");
+      } else {
+        alert("Error: " + (error.message || "Error desconocido"));
+      }
     }
+
     setLoading(false);
   };
 
@@ -347,14 +348,15 @@ const Registro = () => {
           {/* Botón enviar */}
           <div className="md:col-span-2 text-center mt-6">
             <button
-              type="submit"
-              disabled={loading}
-              className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {loading ? 'Registrando...' : 'Registrar'}
-            </button>
+  type="submit"
+  disabled={loading}
+  className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded ${
+    loading ? 'opacity-50 cursor-not-allowed' : ''
+  }`}
+>
+  {loading ? 'Registrando...' : 'Registrar'}
+</button>
+
           </div>
 
         </form>

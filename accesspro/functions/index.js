@@ -1,9 +1,8 @@
 const functions = require("firebase-functions");
 const nodemailer = require("nodemailer");
 
-// Variables de entorno (configúralas con Firebase CLI)
-const EMAIL_USER = functions.config().email.user;
-const EMAIL_PASS = functions.config().email.pass;
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -14,6 +13,7 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.sendRegistrationEmail = functions.https.onCall(async (data, context) => {
+  console.log("Datos recibidos:", data);
   const { email, rut, password } = data;
 
   if (!email) {
@@ -35,9 +35,6 @@ exports.sendRegistrationEmail = functions.https.onCall(async (data, context) => 
     return { success: true };
   } catch (error) {
     console.error("Error al enviar correo:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "Error al enviar correo"
-    );
+    throw new functions.https.HttpsError("internal", "Error al enviar correo");
   }
 });
