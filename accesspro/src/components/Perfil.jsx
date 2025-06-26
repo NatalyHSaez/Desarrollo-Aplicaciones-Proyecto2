@@ -1,40 +1,62 @@
-import React, { useState } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { onAuthStateChanged } from 'firebase/auth';
+import { ref, get } from 'firebase/database';
+import { auth, db } from '../firebase';
 
 function Perfil() {
+  const [usuario, setUsuario] = useState(null);
   const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [cargando, setCargando] = useState(true);
 
-  const usuario = {
-    rut: '21.301.164-2',
-    nombres: 'Nataly Mackarena ',
-    apellidoPaterno: 'Huaiquinao',
-    apellidoMaterno: 'Sáez',
-    fechaNacimiento: '2003-05-21',
-    edad: 22,
-    genero: 'Femenino',
-    email: 'nataly.huaiquinao@example.com',
-    telefono: '+56 9 1234 5678',
-    cargo: 'Administrador',
-    servicio: 'Tecnología',
-    fechaIngreso: '2020-03-01',
-    tipoContrato: 'Indefinido',
-    jornada: 'Completa',
-    password: '21301164', // Simulado
-  };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const snapshot = await get(ref(db, `usuarios/${user.uid}`));
+          if (snapshot.exists()) {
+            setUsuario(snapshot.val());
+          }
+        } catch (error) {
+          console.error('Error al obtener datos:', error);
+        }
+      }
+      setCargando(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const formatearFecha = (fecha) => {
+    if (!fecha) return '';
     const [anio, mes, dia] = fecha.split('-');
     return `${dia}/${mes}/${anio}`;
   };
 
+  if (cargando) {
+    return <p className="text-center text-gray-600 mt-10">Cargando perfil...</p>;
+  }
+
+  if (!usuario) {
+    return <p className="text-center text-red-500 mt-10">No se encontraron datos del usuario.</p>;
+  }
+
   return (
-    <div className="w-full h-full p-6 bg-gray-100 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-5xl w-full">
+    <div className="w-full h-full p-6 bg-gray-100 flex items-center justify-center mt-20">
+      <div className="bg-white rounded-lg shadow-lg p-8 max-w-5xl w-full mt-20">
         <h2 className="text-2xl font-bold mb-4 text-center text-blue-800">Perfil del Usuario</h2>
 
         <div className="flex justify-center mb-6">
-          <QRCodeCanvas value={usuario.rut} size={200} />
+          {usuario.qrCode ? (
+            <img
+              src={usuario.qrCode}
+              alt="Código QR"
+              className="w-48 h-48"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          ) : (
+            <p className="text-gray-500">QR no disponible</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -56,25 +78,23 @@ function Perfil() {
             <p className="text-sm text-gray-500">Contraseña</p>
             <div className="flex items-center gap-2">
               <p className="text-base font-medium text-gray-800">
-                {mostrarPassword ? usuario.password : '********'}
+                {mostrarPassword ? usuario.clave : '********'}
               </p>
               <button
                 onClick={() => setMostrarPassword(!mostrarPassword)}
                 className="text-blue-900 hover:text-blue-700 transition"
-                >
+              >
                 {mostrarPassword ? <FaEye size={18} /> : <FaEyeSlash size={18} />}
               </button>
             </div>
           </div>
         </div>
-        
-      {/* Botón editar */}
-      <div className="flex justify-center mt-8">
-        <button className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
-          Editar
-        </button>
-      </div>
-      
+
+        <div className="flex justify-center mt-8">
+          <button className="bg-blue-900 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+            Editar
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -90,3 +110,4 @@ function Campo({ label, valor }) {
 }
 
 export default Perfil;
+
