@@ -94,13 +94,13 @@ const Registro = () => {
         telefono,
         cargo,
         servicio,
+        clave: password,
       });
 
       const sendEmail = httpsCallable(functions, 'sendRegistrationEmail');
+      const cleanRut = rut.replace(/[^0-9kK]/gi, '').toUpperCase();
       try {
-        const result = await sendEmail({ email, rut, password });
-        console.log("Enviando email a:", email); // <-- Solo para desarrollo
-
+        const result = await sendEmail({ email, rut: cleanRut, password, uid: user.uid });
         if (result.data.success) {
           alert("Correo enviado correctamente");
         }
@@ -108,6 +108,7 @@ const Registro = () => {
         alert("Error al enviar correo: " + error.message);
       }
 
+      // Reset formulario
       setRut('');
       setNombres('');
       setApellidoPaterno('');
@@ -251,7 +252,8 @@ const Registro = () => {
             >
               <option value="">Seleccione</option>
               <option value="Admin">Admin</option>
-              <option value="Usuario">Usuario</option>
+              <option value="Funcionario">Funcionario</option>
+              <option value="Practicante">Practicante</option>
             </select>
             {submitAttempted && errores.cargo && (
               <p className="text-red-500 text-sm">{errores.cargo}</p>
@@ -267,8 +269,14 @@ const Registro = () => {
               className="w-full p-2 border rounded"
             >
               <option value="">Seleccione</option>
-              <option value="TI">TI</option>
+              <option value="Dirección General">Dirección General</option>
+              <option value="Informatica">Informatica</option>
               <option value="RRHH">RRHH</option>
+              <option value="Cajero">Cajero</option>
+              <option value="Ejecutivo">Ejecutivo</option>
+              <option value="Periodismo">Periodismo</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Diseño">Diseño</option>
             </select>
             {submitAttempted && errores.servicio && (
               <p className="text-red-500 text-sm">{errores.servicio}</p>
@@ -303,7 +311,7 @@ const Registro = () => {
                 value={telefono}
                 onChange={handleTelefonoChange}
                 className="w-full p-2 outline-none"
-                maxLength={12}
+                maxLength={13}
                 placeholder="+56 9XXXXXXXX"
               />
             </div>
@@ -348,15 +356,12 @@ const Registro = () => {
           {/* Botón enviar */}
           <div className="md:col-span-2 text-center mt-6">
             <button
-  type="submit"
-  disabled={loading}
-  className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded ${
-    loading ? 'opacity-50 cursor-not-allowed' : ''
-  }`}
->
-  {loading ? 'Registrando...' : 'Registrar'}
-</button>
-
+              type="submit"
+              disabled={loading}
+              className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {loading ? 'Registrando...' : 'Registrar'}
+            </button>
           </div>
 
         </form>

@@ -1,84 +1,45 @@
 import React, { useState } from 'react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { ref, get } from 'firebase/database';
+import { db } from '../firebase';
 
 function InicioSesion({ onLoginSuccess }) {
   const [rut, setRut] = useState('');
-  const [mostrarPassword, setMostrarPassword] = useState(false);
-  const [errorRut, setErrorRut] = useState('');
   const [password, setPassword] = useState('');
-  const [cargando, setCargando] = useState(false);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const togglePassword = () => setMostrarPassword((prev) => !prev);
 
-  const limpiarRut = (rut) => {
-    const limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
-    return limpio.slice(0, 9);
-  };
-
-  const formatearRut = (rut) => {
-    const rutLimpio = rut.replace(/\./g, '').replace('-', '');
-    const cuerpo = rutLimpio.slice(0, -1);
-    const dv = rutLimpio.slice(-1).toUpperCase();
-
-    let rutFormateado = '';
-    let contador = 0;
-
-    for (let i = cuerpo.length - 1; i >= 0; i--) {
-      rutFormateado = cuerpo.charAt(i) + rutFormateado;
-      contador++;
-      if (contador % 3 === 0 && i !== 0) {
-        rutFormateado = '.' + rutFormateado;
-      }
-    }
-
-    return `${rutFormateado}-${dv}`;
-  };
-
-  const validarRut = (rut) =>
-    /^[0-9]{1,2}\.?[0-9]{3}\.?[0-9]{3}-[0-9kK]$/.test(rut);
-
   const handleRutChange = (e) => {
-    const input = e.target.value;
-    const limpio = limpiarRut(input);
-    const formateado = formatearRut(limpio);
-    setRut(formateado);
-
-    if (formateado === '' || validarRut(formateado)) {
-      setErrorRut('');
-    } else {
-      setErrorRut('RUT inválido');
-    }
+    setRut(e.target.value); // sin validaciones ni formato
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validarRut(rut)) {
-      setErrorRut('RUT inválido');
-      return;
-    }
-
-    setCargando(true);
-
     try {
-      const functions = getFunctions();
-      const verificarUsuario = httpsCallable(functions, 'verificarUsuario');
+      const usuariosRef = ref(db, 'usuarios');
+      const snapshot = await get(usuariosRef);
+      const data = snapshot.val();
 
-      const { data } = await verificarUsuario({
-        rut,
-        clave: password,
-      });
+      if (data) {
+        // Buscar usuario con rut exacto (sin puntos ni guiones)
+        const usuario = Object.values(data).find((u) => u.rut === rut);
 
-      if (data?.success) {
-        onLoginSuccess(data);
+        if (usuario) {
+          if (usuario.clave === password) {
+            onLoginSuccess(usuario);
+          } else {
+            alert('Contraseña incorrecta');
+          }
+        } else {
+          alert('Usuario no encontrado');
+        }
       } else {
-        alert('Credenciales incorrectas.');
+        alert('No hay usuarios registrados en la base de datos');
       }
     } catch (error) {
-      console.error('Error al iniciar sesión:', error);
-      alert(error?.message || 'Error de autenticación');
-    } finally {
-      setCargando(false);
+      console.error('Error al verificar usuario:', error);
+      alert('Error al iniciar sesión');
     }
   };
 
@@ -96,13 +57,10 @@ function InicioSesion({ onLoginSuccess }) {
               type="text"
               value={rut}
               onChange={handleRutChange}
-              placeholder="Ej: 12.345.678-9"
+              placeholder="Ej: 152222222"
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          {errorRut && (
-            <p className="text-red-500 text-sm mt-1">{errorRut}</p>
-          )}
         </div>
 
         <div>
@@ -134,10 +92,9 @@ function InicioSesion({ onLoginSuccess }) {
 
         <button
           type="submit"
-          disabled={cargando}
           className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
         >
-          {cargando ? 'Validando...' : 'Entrar'}
+          Entrar
         </button>
       </form>
 
