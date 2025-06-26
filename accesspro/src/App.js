@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa';
+
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { ref, get } from 'firebase/database';
+import { db } from './firebase';
 
 import InicioSesion from './components/InicioSesion';
 import Acceso from './components/Acceso';
@@ -11,18 +16,69 @@ import Historial from './components/Historial';
 import Perfil from './components/Perfil';
 
 function App() {
-  const [autenticado, setAutenticado] = useState(false);
+  const [autenticado, setAutenticado] = useState(null); // null = pendiente
+  const [cargo, setCargo] = useState(null); // cargo del usuario
   const [mostrarSidebar, setMostrarSidebar] = useState(true);
   const navigate = useNavigate();
 
-  const cerrarSesion = () => {
-    setAutenticado(false);
-    navigate('/inicio');
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setAutenticado(true);
+        try {
+          const snapshot = await get(ref(db, `usuarios/${user.uid}`));
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            setCargo(data.cargo ? data.cargo.toLowerCase() : null); // Normalizar cargo a minúsculas
+          } else {
+            setCargo(null);
+          }
+        } catch (error) {
+          console.error('Error al obtener cargo:', error);
+          setCargo(null);
+        }
+      } else {
+        setAutenticado(false);
+        setCargo(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const cerrarSesion = async () => {
+    try {
+      await signOut(auth);
+      setAutenticado(false);
+      setCargo(null);
+      navigate('/inicio');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   const handleLoginSuccess = () => {
     setAutenticado(true);
     navigate('/perfil');
+  };
+
+  if (autenticado === null) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Cargando...</p>
+      </div>
+    );
+  }
+
+  // Componente para rutas privadas y permisos de cargo
+  const RutaPrivada = ({ children, soloAdmin = false }) => {
+    if (!autenticado) {
+      return <Navigate to="/inicio" replace />;
+    }
+    if (soloAdmin && cargo !== 'admin') {
+      return <Navigate to="/perfil" replace />;
+    }
+    return children;
   };
 
   return (
@@ -40,10 +96,16 @@ function App() {
             {autenticado ? (
               <>
                 <Link to="/perfil" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Perfil</Link>
-                <Link to="/control-general" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Control General</Link>
-                <Link to="/control-usuario" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Control Usuario</Link>
                 <Link to="/historial" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Historial</Link>
-                <Link to="/registro" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Registro</Link>
+
+                {cargo === 'admin' && (
+                  <>
+                    <Link to="/control-general" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Control General</Link>
+                    <Link to="/control-usuario" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Control Usuario</Link>
+                    <Link to="/registro" className="block py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">Registro</Link>
+                  </>
+                )}
+
                 <button onClick={cerrarSesion} className="w-full text-left py-2 px-3 rounded hover:bg-blue-700 whitespace-normal">
                   Cerrar Sesión
                 </button>
@@ -66,19 +128,50 @@ function App() {
 
         <div className="p-8 flex-1 flex items-center justify-center bg-gray-100 overflow-auto">
           <Routes>
-            <Route
-              path="/inicio"
-              element={
-                autenticado ? <Navigate to="/perfil" /> : <InicioSesion onLoginSuccess={handleLoginSuccess} />
-              }
-            />
-            <Route path="/acceso" element={<Acceso />} />
-            <Route path="/perfil" element={autenticado ? <Perfil /> : <Navigate to="/inicio" />} />
-            <Route path="/control-general" element={autenticado ? <ControlGeneral /> : <Navigate to="/inicio" />} />
-            <Route path="/control-usuario" element={autenticado ? <ControlUsuario /> : <Navigate to="/inicio" />} />
-            <Route path="/historial" element={autenticado ? <Historial /> : <Navigate to="/inicio" />} />
-            <Route path="/registro" element={autenticado ? <Registro /> : <Navigate to="/inicio" />} />
-            <Route path="*" element={<Navigate to="/inicio" />} />
+            {!autenticado && (
+              <>
+                <Route path="/inicio" element={<InicioSesion onLoginSuccess={handleLoginSuccess} />} />
+                <Route path="/acceso" element={<Acceso />} />
+                <Route path="*" element={<Navigate to="/inicio" replace />} />
+              </>
+            )}
+
+            {autenticado && (
+              <>
+                <Route path="/perfil" element={<Perfil />} />
+                <Route path="/historial" element={<Historial />} />
+
+                <Route
+                  path="/control-general"
+                  element={
+                    <RutaPrivada soloAdmin={true}>
+                      <ControlGeneral />
+                    </RutaPrivada>
+                  }
+                />
+                <Route
+                  path="/control-usuario"
+                  element={
+                    <RutaPrivada soloAdmin={true}>
+                      <ControlUsuario />
+                    </RutaPrivada>
+                  }
+                />
+                <Route
+                  path="/registro"
+                  element={
+                    <RutaPrivada soloAdmin={true}>
+                      <Registro />
+                    </RutaPrivada>
+                  }
+                />
+
+                {/* Redirecciones para rutas públicas */}
+                <Route path="/inicio" element={<Navigate to="/perfil" replace />} />
+                <Route path="/acceso" element={<Navigate to="/perfil" replace />} />
+                <Route path="*" element={<Navigate to="/perfil" replace />} />
+              </>
+            )}
           </Routes>
         </div>
       </div>
