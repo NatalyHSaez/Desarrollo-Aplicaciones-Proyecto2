@@ -1,113 +1,84 @@
 import React, { useState } from 'react';
+import { FaUser, FaLock } from 'react-icons/fa';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 
 function InicioSesion({ onLoginSuccess }) {
-  const [rut, setRut] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mostrarPassword, setMostrarPassword] = useState(false);
-
-  const togglePassword = () => setMostrarPassword((prev) => !prev);
-
-  const handleRutChange = (e) => {
-    setRut(e.target.value); // sin validaciones ni formato
-  };
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    setError(null);
+    setLoading(true);
     try {
-      const usuariosRef = ref(db, 'usuarios');
-      const snapshot = await get(usuariosRef);
-      const data = snapshot.val();
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      if (data) {
-        // Buscar usuario con rut exacto (sin puntos ni guiones)
-        const usuario = Object.values(data).find((u) => u.rut === rut);
-
-        if (usuario) {
-          if (usuario.clave === password) {
-            onLoginSuccess(usuario);
-          } else {
-            alert('Contraseña incorrecta');
-          }
-        } else {
-          alert('Usuario no encontrado');
-        }
+      // Verificar datos usuario en la BD
+      const snapshot = await get(ref(db, `usuarios/${user.uid}`));
+      if (snapshot.exists()) {
+        // Usuario válido y datos encontrados
+        onLoginSuccess();
       } else {
-        alert('No hay usuarios registrados en la base de datos');
+        setError('No se encontraron datos del usuario en la base de datos.');
       }
-    } catch (error) {
-      console.error('Error al verificar usuario:', error);
-      alert('Error al iniciar sesión');
+    } catch (err) {
+      console.error('Error al verificar usuario:', err);
+      setError('Correo o contraseña incorrectos.');
     }
+    setLoading(false);
   };
 
   return (
-    <div className="max-w-md w-full bg-white rounded-xl shadow-md p-8 space-y-6">
-      <h2 className="text-3xl font-bold text-center text-blue-900">Iniciar Sesión</h2>
-      <form className="space-y-5" onSubmit={handleSubmit}>
+    <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+      <h2 className="text-2xl font-bold text-center mb-6 text-blue-800">Iniciar Sesión</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">RUT</label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-              <i className="fas fa-id-card" />
-            </span>
+          <label className="block text-gray-700 mb-1" htmlFor="email">Correo Electrónico</label>
+          <div className="flex items-center border border-gray-300 rounded-md px-3">
+            <FaUser className="text-gray-400" />
             <input
-              type="text"
-              value={rut}
-              onChange={handleRutChange}
-              placeholder="Ej: 152222222"
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              id="email"
+              type="email"
+              placeholder="usuario@ejemplo.com"
+              className="flex-1 py-2 px-3 focus:outline-none"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Contraseña</label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-              <i className="fas fa-lock" />
-            </span>
+          <label className="block text-gray-700 mb-1" htmlFor="password">Contraseña</label>
+          <div className="flex items-center border border-gray-300 rounded-md px-3">
+            <FaLock className="text-gray-400" />
             <input
-              type={mostrarPassword ? 'text' : 'password'}
+              id="password"
+              type="password"
+              placeholder="********"
+              className="flex-1 py-2 px-3 focus:outline-none"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Ingresa tu contraseña"
-              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
             />
-            <button
-              type="button"
-              onClick={togglePassword}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-blue-700 hover:text-blue-900 focus:outline-none"
-            >
-              {mostrarPassword ? (
-                <i className="fas fa-eye" />
-              ) : (
-                <i className="fas fa-eye-slash" />
-              )}
-            </button>
           </div>
         </div>
+
+        {error && <p className="text-red-600 text-center">{error}</p>}
 
         <button
           type="submit"
-          className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+          disabled={loading}
+          className={`w-full bg-blue-900 text-white py-2 rounded hover:bg-blue-700 transition ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
         >
-          Entrar
+          {loading ? 'Ingresando...' : 'Iniciar Sesión'}
         </button>
       </form>
-
-      <div className="text-center text-sm text-gray-500">
-        ¿Olvidaste tu contraseña?{' '}
-        <button
-          type="button"
-          onClick={() => alert('Funcionalidad de recuperación')}
-          className="text-blue-700 hover:underline bg-transparent border-0 p-0 cursor-pointer"
-        >
-          Recupérala aquí
-        </button>
-      </div>
     </div>
   );
 }
