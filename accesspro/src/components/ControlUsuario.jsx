@@ -1,30 +1,29 @@
-import React from 'react';
-
-const usuarios = [
-  {
-    rut: '12.345.678-9',
-    nombres: 'Juan Carlos',
-    apellidoPat: 'Pérez',
-    apellidoMat: 'González',
-    cargo: 'Analista',
-    servicio: 'TI',
-    email: 'juan.perez@empresa.cl',
-    telefono: '+56 9 1234 5678',
-  },
-  {
-    rut: '98.765.432-1',
-    nombres: 'María José',
-    apellidoPat: 'Soto',
-    apellidoMat: 'Riquelme',
-    cargo: 'Supervisora',
-    servicio: 'Recursos Humanos',
-    email: 'maria.soto@empresa.cl',
-    telefono: '+56 9 8765 4321',
-  },
-  // Puedes agregar más usuarios aquí
-];
+import React, { useEffect, useState } from 'react';
+import { ref, onValue } from 'firebase/database';
+import { db } from '../firebase'; // Asegúrate que tu archivo firebase.js exporte correctamente `db`
 
 function ControlUsuario() {
+  const [usuarios, setUsuarios] = useState([]);
+
+  useEffect(() => {
+    const usuariosRef = ref(db, 'usuarios'); // Asegúrate que los datos estén en esa ruta en tu BD
+    const unsubscribe = onValue(usuariosRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const usuariosArray = Object.entries(data).map(([id, usuario]) => ({
+          id,
+          ...usuario,
+        }));
+        setUsuarios(usuariosArray);
+      } else {
+        setUsuarios([]);
+      }
+    });
+
+    // Limpieza del listener
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="p-6 w-full h-full overflow-auto">
       <h2 className="text-2xl font-bold mb-4">Gestión de Usuarios</h2>
@@ -45,11 +44,11 @@ function ControlUsuario() {
           </thead>
           <tbody>
             {usuarios.map((usuario, index) => (
-              <tr key={index} className="border-t text-sm hover:bg-gray-100">
+              <tr key={usuario.id || index} className="border-t text-sm hover:bg-gray-100">
                 <td className="px-4 py-2">{usuario.rut}</td>
                 <td className="px-4 py-2">{usuario.nombres}</td>
-                <td className="px-4 py-2">{usuario.apellidoPat}</td>
-                <td className="px-4 py-2">{usuario.apellidoMat}</td>
+                <td className="px-4 py-2">{usuario.apellidoPaterno}</td>
+                <td className="px-4 py-2">{usuario.apellidoMaterno}</td>
                 <td className="px-4 py-2">{usuario.cargo}</td>
                 <td className="px-4 py-2">{usuario.servicio}</td>
                 <td className="px-4 py-2">{usuario.email}</td>
@@ -64,6 +63,13 @@ function ControlUsuario() {
                 </td>
               </tr>
             ))}
+            {usuarios.length === 0 && (
+              <tr>
+                <td colSpan="9" className="text-center py-4 text-gray-500">
+                  No hay usuarios registrados.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
