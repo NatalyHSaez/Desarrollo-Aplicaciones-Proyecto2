@@ -1,79 +1,122 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import { ref, get, child, push, set } from 'firebase/database';
+import { db } from '../firebase';
 
-function Acceso() {
-  const videoRef = useRef(null);
-  const [fechaHora, setFechaHora] = useState(new Date());
+export default function Acceso() {
+  const [usuario, setUsuario] = useState(null);
+  const [error, setError] = useState('');
+  const [registrado, setRegistrado] = useState(false);
+  const [escaneando, setEscaneando] = useState(false);
+  const qrCodeRegionId = 'reader';
+  const scanner = useRef(null);
 
-  useEffect(() => {
-    // Activar cámara
-    async function activarCamara() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+  const iniciarEscaneo = () => {
+    if (escaneando) return;
+    setEscaneando(true);
+
+    scanner.current = new Html5Qrcode(qrCodeRegionId);
+    scanner.current.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: 250 },
+      async (decodedText) => {
+        try {
+          await scanner.current.stop();
+          document.getElementById(qrCodeRegionId).innerHTML = '';
+          setEscaneando(false);
+          verificarUsuario(decodedText);
+        } catch (err) {
+          console.error('Error al detener el escáner:', err);
         }
-      } catch (err) {
-        console.error('Error al acceder a la cámara:', err);
+      },
+      (error) => {
+        console.warn('Error escaneando:', error);
       }
+    );
+  };
+
+  const verificarUsuario = async (qrLeido) => {
+    setError('');
+    setRegistrado(false);
+    setUsuario(null);
+
+    try {
+      const snapshot = await get(child(ref(db), 'usuarios'));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const usuarioEncontrado = Object.values(data).find(
+          (u) => u.qrCode === qrLeido
+        );
+
+        if (usuarioEncontrado) {
+          setUsuario(usuarioEncontrado);
+          registrarMarca(usuarioEncontrado);
+        } else {
+          setError('QR no coincide con ningún usuario.');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error consultando la base de datos.');
     }
-    activarCamara();
+  };
 
-    // Actualizar fecha y hora cada segundo
-    const intervalo = setInterval(() => {
-      setFechaHora(new Date());
-    }, 1000);
+  const registrarMarca = async (usuario) => {
+    const now = new Date();
+    const marca = {
+      uid: usuario.uid || '',
+      nombre: `${usuario.nombres} ${usuario.apellidoPaterno}`,
+      fecha: now.toLocaleDateString(),
+      hora: now.toLocaleTimeString(),
+      tipo: 'Entrada',
+    };
 
-    // Limpiar intervalo al desmontar componente
-    return () => clearInterval(intervalo);
-  }, []);
-
-  // Formatear fecha y hora desde el estado
-  const fechaFormateada = `${fechaHora.getDate().toString().padStart(2, '0')}/${(fechaHora.getMonth() + 1)
-    .toString()
-    .padStart(2, '0')}/${fechaHora.getFullYear().toString().slice(2)}`;
-
-  const horaActual = fechaHora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    try {
+      const nuevaRef = push(ref(db, 'registros'));
+      await set(nuevaRef, marca);
+      setRegistrado(true);
+    } catch (err) {
+      console.error('Error registrando marca:', err);
+      setError('No se pudo registrar la marca.');
+    }
+  };
 
   return (
-    <div className="w-full max-w-3xl mx-auto mt-8 p-6 bg-white rounded-2xl shadow-lg">
-      <h2 className="text-3xl font-bold text-center mb-6 text-blue-900">Registro de Marca</h2>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 px-4">
+      <h1 className="text-3xl font-bold mb-6">Acceso por QR</h1>
 
-      {/* Tipo */}
-      <div className="mb-6 text-lg flex flex-col sm:flex-row items-start sm:items-center sm:gap-6">
-        <label className="font-semibold text-xl text-gray-700">Tipo:</label>
-        <div className="flex gap-6 mt-2 sm:mt-0">
-          <label className="text-black text-lg flex items-center gap-2">
-            <input type="radio" name="tipo" defaultChecked className="w-4 h-4 accent-black" />
-            Entrada
-          </label>
-          <label className="text-black text-lg flex items-center gap-2">
-            <input type="radio" name="tipo" className="w-4 h-4 accent-black" />
-            Salida
-          </label>
+      <button
+        onClick={iniciarEscaneo}
+        className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 mb-4"
+      >
+        Registrar Marca
+      </button>
+
+      <div
+        id={qrCodeRegionId}
+        className="w-full max-w-md h-64 border border-gray-300 rounded shadow-md bg-white flex items-center justify-center"
+      >
+        {!escaneando && <p className="text-gray-500">Escáner inactivo</p>}
+      </div>
+
+      {usuario && (
+        <div className="mt-6 p-4 bg-green-100 border border-green-300 rounded w-full max-w-md text-center">
+          <p className="font-bold text-green-700">Usuario registrado:</p>
+          <p>{usuario.nombres} {usuario.apellidoPaterno}</p>
+          <p className="text-sm text-gray-600">Marca registrada con éxito.</p>
         </div>
-      </div>
+      )}
 
-      {/* Fecha */}
-      <div className="mb-4 text-xl text-gray-700">
-        <span className="font-semibold mr-2">Fecha:</span>
-        {fechaFormateada}
-      </div>
+      {registrado && (
+        <div className="mt-4 text-green-600 font-medium">✓ Registro exitoso</div>
+      )}
 
-      {/* Hora */}
-      <div className="mb-8 text-xl text-gray-700">
-        <span className="font-semibold mr-2">Hora:</span>
-        {horaActual} Hrs
-      </div>
-
-      {/* Lector QR */}
-      <div className="text-center">
-        <h3 className="text-2xl font-semibold mb-4 text-blue-800">Lector QR</h3>
-        <div className="w-60 h-60 mx-auto border-4 border-gray-500 rounded-xl overflow-hidden shadow-md">
-          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+      {error && (
+        <div className="mt-6 p-4 bg-red-100 border border-red-300 rounded w-full max-w-md text-center">
+          <p className="text-red-700 font-bold">Error:</p>
+          <p>{error}</p>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-
-export default Acceso;

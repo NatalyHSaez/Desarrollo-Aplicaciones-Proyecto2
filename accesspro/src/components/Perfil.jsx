@@ -44,14 +44,14 @@ function Perfil() {
   return (
     <div className="w-full h-full p-6 bg-gray-100 flex items-center justify-center mt-20">
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-5xl w-full mt-20">
-        <h2 className="text-2xl font-bold mb-4 text-center text-blue-800">Perfil del Usuario</h2>
+        <h2 className="text-2xl font-bold text-center text-blue-800">Perfil del Usuario</h2>
 
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center ">
           {usuario.qrCode ? (
             <img
               src={usuario.qrCode}
               alt="Código QR"
-              className="w-48 h-48"
+              className="w-60 h-60"
               style={{ imageRendering: 'pixelated' }}
             />
           ) : (

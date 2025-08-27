@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FiUser, FiMail, FiLock, FiPhone, FiCalendar, FiUserCheck
 } from 'react-icons/fi';
 
-import { auth, db, functions } from '../firebase';
+import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
-import { httpsCallable } from 'firebase/functions';
+import QRCode from 'qrcode';
 
 const formatRUT = (rut) => {
   let clean = rut.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
@@ -23,22 +23,42 @@ const formatRUT = (rut) => {
   return `${formatted}-${dv}`;
 };
 
+const calcularEdad = (fechaNacimiento) => {
+  if (!fechaNacimiento) return '';
+  const hoy = new Date();
+  const nacimiento = new Date(fechaNacimiento);
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const m = hoy.getMonth() - nacimiento.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--;
+  }
+  return edad >= 0 ? edad : '';
+};
+
 const Registro = () => {
   const [rut, setRut] = useState('');
   const [nombres, setNombres] = useState('');
   const [apellidoPaterno, setApellidoPaterno] = useState('');
   const [apellidoMaterno, setApellidoMaterno] = useState('');
-  const [genero, setGenero] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [edad, setEdad] = useState('');
+  const [genero, setGenero] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('+56 9');
   const [cargo, setCargo] = useState('');
   const [servicio, setServicio] = useState('');
+  const [fechaIngreso, setFechaIngreso] = useState(new Date().toISOString().split("T")[0]);
+  const [tipoContrato, setTipoContrato] = useState('');
+  const [jornada, setJornada] = useState('');
   const [password, setPassword] = useState('');
   const [repetirPassword, setRepetirPassword] = useState('');
   const [errores, setErrores] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setEdad(calcularEdad(fechaNacimiento));
+  }, [fechaNacimiento]);
 
   const handleRutChange = (e) => {
     const value = e.target.value;
@@ -47,9 +67,8 @@ const Registro = () => {
   };
 
   const handleTelefonoChange = (e) => {
-    const value = e.target.value;
     const fixedPrefix = '+56 9';
-    let input = value.replace(/\D/g, '');
+    let input = e.target.value.replace(/\D/g, '');
     if (input.startsWith('56')) input = input.slice(2);
     if (input.startsWith('9')) input = input.slice(1);
     input = input.slice(0, 8);
@@ -65,12 +84,15 @@ const Registro = () => {
     if (!nombres) nuevosErrores.nombres = 'Nombres es obligatorio';
     if (!apellidoPaterno) nuevosErrores.apellidoPaterno = 'Apellido paterno es obligatorio';
     if (!apellidoMaterno) nuevosErrores.apellidoMaterno = 'Apellido materno es obligatorio';
-    if (!genero) nuevosErrores.genero = 'Debe seleccionar un género';
     if (!fechaNacimiento) nuevosErrores.fechaNacimiento = 'La fecha de nacimiento es obligatoria';
+    if (!genero) nuevosErrores.genero = 'Debe seleccionar un género';
     if (!email) nuevosErrores.email = 'El email es obligatorio';
     if (!telefono || telefono.length < 12) nuevosErrores.telefono = 'Teléfono no válido';
     if (!cargo) nuevosErrores.cargo = 'Debe seleccionar un cargo';
     if (!servicio) nuevosErrores.servicio = 'Debe seleccionar un servicio';
+    if (!fechaIngreso) nuevosErrores.fechaIngreso = 'La fecha de ingreso es obligatoria';
+    if (!tipoContrato) nuevosErrores.tipoContrato = 'Debe seleccionar un tipo de contrato';
+    if (!jornada) nuevosErrores.jornada = 'Debe seleccionar una jornada';
     if (!password) nuevosErrores.password = 'Debe ingresar una contraseña';
     if (password !== repetirPassword) nuevosErrores.repetirPassword = 'Las contraseñas no coinciden';
 
@@ -82,47 +104,51 @@ const Registro = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      const timestamp = Date.now();
+      const qrText = `EMAIL:${email}|TS:${timestamp}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(qrText);
+
       await set(ref(db, "usuarios/" + user.uid), {
         uid: user.uid,
         rut,
         nombres,
         apellidoPaterno,
         apellidoMaterno,
-        genero,
         fechaNacimiento,
+        edad,
+        genero,
         email,
         telefono,
         cargo,
         servicio,
+        fechaIngreso,
+        tipoContrato,
+        jornada,
         clave: password,
+        qrCode: qrCodeDataUrl,
       });
 
-      const sendEmail = httpsCallable(functions, 'sendRegistrationEmail');
-      const cleanRut = rut.replace(/[^0-9kK]/gi, '').toUpperCase();
-      try {
-        const result = await sendEmail({ email, rut: cleanRut, password, uid: user.uid });
-        if (result.data.success) {
-          alert("Correo enviado correctamente");
-        }
-      } catch (error) {
-        alert("Error al enviar correo: " + error.message);
-      }
-
-      // Reset formulario
+      // Limpiar formulario
       setRut('');
       setNombres('');
       setApellidoPaterno('');
       setApellidoMaterno('');
-      setGenero('');
       setFechaNacimiento('');
+      setEdad('');
+      setGenero('');
       setEmail('');
       setTelefono('+56 9');
       setCargo('');
       setServicio('');
+      setFechaIngreso(new Date().toISOString().split("T")[0]);
+      setTipoContrato('');
+      setJornada('');
       setPassword('');
       setRepetirPassword('');
       setErrores({});
       setSubmitAttempted(false);
+
+      alert("Usuario registrado correctamente.");
 
     } catch (error) {
       console.error("Error al registrar usuario:", error);
@@ -137,8 +163,8 @@ const Registro = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-20">
-      <div className="bg-white p-8 rounded-xl shadow-md">
+    <div className="max-w-4xl mx-auto mt-80">
+      <div className="bg-white p-8 rounded-xl shadow-md mt-20">
         <h2 className="text-3xl font-bold text-center text-blue-900 mb-8">Registro de Usuario</h2>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
@@ -158,24 +184,6 @@ const Registro = () => {
             </div>
             {submitAttempted && errores.rut && (
               <p className="text-red-500 text-sm">{errores.rut}</p>
-            )}
-          </div>
-
-          {/* Género */}
-          <div>
-            <label className="block text-gray-700 mb-1">Género</label>
-            <select
-              value={genero}
-              onChange={(e) => setGenero(e.target.value)}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Seleccione</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Femenino">Femenino</option>
-              <option value="Otro">Otro</option>
-            </select>
-            {submitAttempted && errores.genero && (
-              <p className="text-red-500 text-sm">{errores.genero}</p>
             )}
           </div>
 
@@ -234,11 +242,78 @@ const Registro = () => {
                 value={fechaNacimiento}
                 onChange={(e) => setFechaNacimiento(e.target.value)}
                 className="w-full p-2 outline-none"
-                max={new Date().toISOString().split("T")[0]} // no permitir fechas futuras
+                max={new Date().toISOString().split("T")[0]}
               />
             </div>
             {submitAttempted && errores.fechaNacimiento && (
               <p className="text-red-500 text-sm">{errores.fechaNacimiento}</p>
+            )}
+          </div>
+
+          {/* Edad (solo lectura) */}
+          <div>
+            <label className="block text-gray-700 mb-1">Edad</label>
+            <input
+              type="number"
+              value={edad}
+              readOnly
+              className="w-full p-2 border rounded bg-gray-100 cursor-not-allowed"
+              placeholder=""
+            />
+          </div>
+
+          {/* Género */}
+          <div>
+            <label className="block text-gray-700 mb-1">Género</label>
+            <select
+              value={genero}
+              onChange={(e) => setGenero(e.target.value)}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Seleccione</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Otro">Otro</option>
+            </select>
+            {submitAttempted && errores.genero && (
+              <p className="text-red-500 text-sm">{errores.genero}</p>
+            )}
+          </div>
+
+          {/* Correo Electrónico */}
+          <div>
+            <label className="block text-gray-700 mb-1">Correo Electrónico</label>
+            <div className="flex items-center border rounded px-2">
+              <FiMail className="text-gray-400 mr-2" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-2 outline-none"
+                autoComplete="email"
+              />
+            </div>
+            {submitAttempted && errores.email && (
+              <p className="text-red-500 text-sm">{errores.email}</p>
+            )}
+          </div>
+
+          {/* Teléfono */}
+          <div>
+            <label className="block text-gray-700 mb-1">Teléfono</label>
+            <div className="flex items-center border rounded px-2">
+              <FiPhone className="text-gray-400 mr-2" />
+              <input
+                type="text"
+                value={telefono}
+                onChange={handleTelefonoChange}
+                className="w-full p-2 outline-none"
+                maxLength={13}
+                placeholder="+56 9XXXXXXXX"
+              />
+            </div>
+            {submitAttempted && errores.telefono && (
+              <p className="text-red-500 text-sm">{errores.telefono}</p>
             )}
           </div>
 
@@ -283,40 +358,58 @@ const Registro = () => {
             )}
           </div>
 
-          {/* Email */}
+          {/* Fecha de Ingreso */}
           <div>
-            <label className="block text-gray-700 mb-1">Email</label>
+            <label className="block text-gray-700 mb-1">Fecha de Ingreso</label>
             <div className="flex items-center border rounded px-2">
-              <FiMail className="text-gray-400 mr-2" />
+              <FiCalendar className="text-gray-400 mr-2" />
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="date"
+                value={fechaIngreso}
+                onChange={(e) => setFechaIngreso(e.target.value)}
                 className="w-full p-2 outline-none"
-                autoComplete="email"
+                max={new Date().toISOString().split("T")[0]}
               />
             </div>
-            {submitAttempted && errores.email && (
-              <p className="text-red-500 text-sm">{errores.email}</p>
+            {submitAttempted && errores.fechaIngreso && (
+              <p className="text-red-500 text-sm">{errores.fechaIngreso}</p>
             )}
           </div>
 
-          {/* Teléfono */}
+          {/* Tipo de Contrato */}
           <div>
-            <label className="block text-gray-700 mb-1">Teléfono</label>
-            <div className="flex items-center border rounded px-2">
-              <FiPhone className="text-gray-400 mr-2" />
-              <input
-                type="text"
-                value={telefono}
-                onChange={handleTelefonoChange}
-                className="w-full p-2 outline-none"
-                maxLength={13}
-                placeholder="+56 9XXXXXXXX"
-              />
-            </div>
-            {submitAttempted && errores.telefono && (
-              <p className="text-red-500 text-sm">{errores.telefono}</p>
+            <label className="block text-gray-700 mb-1">Tipo de Contrato</label>
+            <select
+              value={tipoContrato}
+              onChange={(e) => setTipoContrato(e.target.value)}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Seleccione</option>
+              <option value="Plazo Fijo">Plazo Fijo</option>
+              <option value="Indefinido">Indefinido</option>
+              <option value="Honorarios">Honorarios</option>
+              <option value="Contratista">Contratista</option>
+            </select>
+            {submitAttempted && errores.tipoContrato && (
+              <p className="text-red-500 text-sm">{errores.tipoContrato}</p>
+            )}
+          </div>
+
+          {/* Jornada */}
+          <div>
+            <label className="block text-gray-700 mb-1">Jornada</label>
+            <select
+              value={jornada}
+              onChange={(e) => setJornada(e.target.value)}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Seleccione</option>
+              <option value="Diurno">Diurno</option>
+              <option value="Media Jornada">Media Jornada</option>
+              <option value="Turnos">Turnos</option>
+            </select>
+            {submitAttempted && errores.jornada && (
+              <p className="text-red-500 text-sm">{errores.jornada}</p>
             )}
           </div>
 
